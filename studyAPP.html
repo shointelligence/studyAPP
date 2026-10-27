@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyQuest（スタディクエスト）| 美しい学習可視化＆ポモドーロスタジオ</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Plus Jakarta Sans & Noto Sans JP -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '"Noto Sans JP"', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    },
+                    colors: {
+                        brand: {
+                            bg: '#050811',
+                            card: 'rgba(15, 23, 42, 0.65)',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            violet: '#8b5cf6',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981',
+                            rose: '#f43f5e',
+                            amber: '#f59e0b'
+                        }
+                    },
+                    boxShadow: {
+                        'glow-violet': '0 0 35px -5px rgba(139, 92, 246, 0.45)',
+                        'glow-cyan': '0 0 35px -5px rgba(6, 182, 212, 0.45)',
+                        'glow-emerald': '0 0 35px -5px rgba(16, 185, 129, 0.45)',
+                        'glass': '0 20px 40px rgba(0, 0, 0, 0.5)',
+                    },
+                    animation: {
+                        'mesh-float-1': 'meshFloat1 20s ease-in-out infinite alternate',
+                        'mesh-float-2': 'meshFloat2 25s ease-in-out infinite alternate',
+                        'mesh-float-3': 'meshFloat3 18s ease-in-out infinite alternate',
+                        'pulse-glow': 'pulseGlow 3s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        meshFloat1: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '100%': { transform: 'translate(100px, 60px) scale(1.15)' }
+                        },
+                        meshFloat2: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '100%': { transform: 'translate(-80px, -50px) scale(1.1)' }
+                        },
+                        meshFloat3: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '100%': { transform: 'translate(60px, -90px) scale(1.2)' }
+                        },
+                        pulseGlow: {
+                            '0%': { opacity: '0.5', filter: 'drop-shadow(0 0 15px rgba(139, 92, 246, 0.3))' },
+                            '100%': { opacity: '0.9', filter: 'drop-shadow(0 0 30px rgba(6, 182, 212, 0.7))' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+            background-color: #050811;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* GLASSMORPHISM CARDS */
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.16);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        /* INTERACTIVE BUTTON SPRING EFFECTS */
+        .btn-spring {
+            transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-spring:hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+        .btn-spring:active {
+            transform: translateY(1px) scale(0.97);
+        }
+
+        /* CIRCULAR PROGRESS RING STROKE */
+        .timer-ring-bg {
+            stroke: rgba(255, 255, 255, 0.05);
+        }
+        .timer-ring-stroke {
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            stroke-linecap: round;
+        }
+
+        /* CUSTOM SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(5, 8, 17, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen relative flex flex-col justify-between selection:bg-purple-500 selection:text-white">
+
+    <!-- BACKGROUND AMBIENT GLOW MESH ORBS -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute -top-40 -left-40 w-[30rem] h-[30rem] bg-purple-600/20 rounded-full blur-[140px] animate-mesh-float-1"></div>
+        <div class="absolute top-1/3 -right-40 w-[32rem] h-[32rem] bg-cyan-600/18 rounded-full blur-[150px] animate-mesh-float-2"></div>
+        <div class="absolute -bottom-40 left-1/3 w-[36rem] h-[36rem] bg-emerald-600/12 rounded-full blur-[160px] animate-mesh-float-3"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/70 to-slate-950"></div>
+    </div>
+
+    <div class="relative z-10 flex flex-col min-h-screen">
+
+        <!-- HEADER BAR -->
+        <header class="sticky top-0 z-40 w-full backdrop-blur-2xl bg-slate-950/60 border-b border-white/10 shadow-glass">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+                
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-3.5 shrink-0">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-600 to-cyan-400 p-[1px] shadow-glow-violet flex items-center justify-center animate-pulse-glow">
+                        <div class="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 text-xl font-black">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-purple-300 bg-clip-text text-transparent">StudyQuest</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 font-extrabold uppercase tracking-wider">Studio</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 font-medium hidden sm:block">極上の集中と学習可視化ダッシュボード</p>
+                    </div>
+                </div>
+
+                <!-- Status & Gamification Stats -->
+                <div class="flex items-center space-x-3 sm:space-x-5">
+                    
+                    <!-- Streak Card -->
+                    <div class="flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 px-3.5 py-1.5 rounded-2xl">
+                        <i class="fa-solid fa-fire text-amber-400 text-sm animate-bounce"></i>
+                        <div class="text-xs">
+                            <div class="text-[9px] text-amber-400/80 font-black uppercase tracking-wider">Streak</div>
+                            <div class="font-black text-amber-300"><span id="headerStreak">1</span> 日連続</div>
+                        </div>
+                    </div>
+
+                    <!-- Level Badge & XP -->
+                    <div class="hidden md:flex items-center space-x-3 bg-slate-900/80 border border-white/10 px-4 py-2 rounded-2xl backdrop-blur-md">
+                        <div class="text-xs">
+                            <div class="flex justify-between items-center gap-3 font-extrabold">
+                                <span class="flex items-center gap-1.5 text-purple-400">
+                                    <i class="fa-solid fa-crown text-amber-400"></i>
+                                    Lv.<span id="headerLevel">1</span>
+                                </span>
+                                <span id="headerRankBadge" class="text-[10px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-md font-bold">🐣 見習いチャレンジャー</span>
+                            </div>
+                            <!-- XP Bar -->
+                            <div class="w-28 bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden relative">
+                                <div id="headerXpProgress" class="bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-400 h-full w-0 transition-all duration-700 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-mono font-bold shrink-0">
+                            <span id="headerXpText">0</span> / <span id="headerNextXpText">100</span> XP
+                        </div>
+                    </div>
+
+                    <!-- Utility Buttons -->
+                    <div class="flex items-center space-x-1.5 border-l border-white/10 pl-3">
+                        <button onclick="toggleAudioMute()" id="btnAudioToggle" class="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition" title="効果音オン/オフ">
+                            <i id="audioIcon" class="fa-solid fa-volume-high text-sm"></i>
+                        </button>
+                        <button onclick="openTosModal()" class="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition" title="利用規約">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN APP CONTENT GRID -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- LEFT COLUMN: TIMER & AGE PRESETS (5 cols) -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- MAIN TIMER CARD -->
+                <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden text-center border border-white/10 shadow-glow-violet">
+                    
+                    <!-- Ambient Glow -->
+                    <div id="timerGlow" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl pointer-events-none transition-all duration-700"></div>
+
+                    <!-- Age Presets Selector -->
+                    <div class="mb-6 relative z-10">
+                        <div class="flex items-center justify-between mb-2.5 px-1">
+                            <span class="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-user-graduate text-purple-400"></i> 年齢別おすすめタイマー
+                            </span>
+                            <button onclick="openCustomTimerModal()" class="text-xs font-bold text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
+                                <i class="fa-solid fa-sliders"></i> カスタム
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-white/10">
+                            <button onclick="setPreset('elementary')" id="btnPresetElem" class="preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+                                <span>小学生</span>
+                                <span class="text-[9px] opacity-70">25分/5分</span>
+                            </button>
+                            <button onclick="setPreset('junior')" id="btnPresetJunior" class="preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+                                <span>中高生</span>
+                                <span class="text-[9px] opacity-70">45分/10分</span>
+                            </button>
+                            <button onclick="setPreset('adult')" id="btnPresetAdult" class="preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+                                <span>大人</span>
+                                <span class="text-[9px] opacity-70">50分/10分</span>
+                            </button>
+                            <button onclick="setPreset('custom')" id="btnPresetCustom" class="preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+                                <span>カスタム</span>
+                                <span id="customPillSub" class="text-[9px] opacity-70">自由設定</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mode Indicator Badge -->
+                    <div id="modeBadge" class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black shadow-lg border transition-all duration-500 bg-purple-500/20 text-purple-300 border-purple-500/40">
+                        <span class="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping"></span>
+                        <span id="modeBadgeText">🔥 集中セッション中</span>
+                    </div>
+
+                    <!-- Glowing Circular Timer Progress Ring -->
+                    <div class="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto my-6 flex items-center justify-center">
+                        <svg class="w-full h-full drop-shadow-2xl" viewBox="0 0 220 220">
+                            <circle class="timer-ring-bg" cx="110" cy="110" r="95" stroke-width="10" fill="none" />
+                            <circle id="timerProgressRing" class="timer-ring-stroke" cx="110" cy="110" r="95" stroke-width="10" stroke="url(#timerGradient)" fill="none" stroke-dasharray="596.9" stroke-dashoffset="0" />
+                            <defs>
+                                <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#8b5cf6" id="gradStart" />
+                                    <stop offset="100%" stop-color="#06b6d4" id="gradEnd" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+
+                        <!-- Digital Clock Overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <div id="timerDisplay" class="text-5xl sm:text-6xl font-black font-mono tracking-tighter text-white drop-shadow-md">
+                                45:00
+                            </div>
+                            <span id="timerSubGoal" class="text-xs font-extrabold text-slate-400 mt-1 uppercase tracking-wider">目標: 45分 集中</span>
+                        </div>
+                    </div>
+
+                    <!-- Timer Controls -->
+                    <div class="flex items-center justify-center gap-3 relative z-10">
+                        <button id="btnMainStart" onclick="toggleTimer()" class="flex-1 bg-gradient-to-r from-purple-600 via-violet-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black py-4 px-6 rounded-2xl shadow-glow-violet btn-spring flex items-center justify-center gap-2 text-base">
+                            <i id="iconMainStart" class="fa-solid fa-play"></i>
+                            <span id="textMainStart">スタート</span>
+                        </button>
+                        <button onclick="resetTimer()" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-extrabold p-4 rounded-2xl btn-spring border border-white/10 transition" title="リセット">
+                            <i class="fa-solid fa-rotate-right text-base"></i>
+                        </button>
+                        <button onclick="skipTimer()" class="bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-extrabold p-4 rounded-2xl btn-spring border border-white/10 transition" title="スキップ">
+                            <i class="fa-solid fa-forward-step text-base"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- DAILY QUEST STAMP CARD -->
+                <div class="glass-card rounded-3xl p-5 border border-white/10">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                            <i class="fa-solid fa-award text-amber-400"></i> デイリーセッション・スタンプ
+                        </h3>
+                        <span id="stampCountText" class="text-xs font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 rounded-full">0 / 5 達成</span>
+                    </div>
+                    <div id="stampCardGrid" class="grid grid-cols-5 gap-2.5">
+                        <!-- JS Rendered -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: ANALYTICS & LOGGING MEMO DECK (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- DASHBOARD STATS METRICS -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="glass-card rounded-2xl p-4 border border-white/10">
+                        <div class="text-[11px] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-clock text-purple-400"></i> 本日の学習
+                        </div>
+                        <div id="statTodayTime" class="text-2xl font-black text-white font-mono">0 <span class="text-xs text-slate-400 font-sans font-normal">分</span></div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 border border-white/10">
+                        <div class="text-[11px] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-chart-line text-cyan-400"></i> 累計学習時間
+                        </div>
+                        <div id="statTotalTime" class="text-2xl font-black text-white font-mono">0 <span class="text-xs text-slate-400 font-sans font-normal">分</span></div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 border border-white/10">
+                        <div class="text-[11px] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-note-sticky text-rose-400"></i> メモ件数
+                        </div>
+                        <div id="statTotalLogs" class="text-2xl font-black text-white font-mono">0 <span class="text-xs text-slate-400 font-sans font-normal">件</span></div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 border border-white/10">
+                        <div class="text-[11px] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-book-bookmark text-emerald-400"></i> 一番勉強した教科
+                        </div>
+                        <div id="statTopSubject" class="text-sm font-extrabold text-white truncate mt-1">なし</div>
+                    </div>
+                </div>
+
+                <!-- STUDY MEMO INPUT FORM -->
+                <div class="glass-card rounded-3xl p-6 border border-white/10">
+                    <h3 class="text-sm font-extrabold text-white mb-4 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-purple-400"></i> 学習内容・メモを記録
+                        </span>
+                        <span class="text-[11px] font-normal text-slate-400">セッション終了時 または 手動入力</span>
+                    </h3>
+
+                    <form id="memoForm" onsubmit="handleMemoSubmit(event)" class="space-y-4">
+                        <!-- Subject Pill Selector -->
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 block mb-2">教科・カテゴリーを選択</label>
+                            <div id="subjectPillContainer" class="flex flex-wrap gap-2">
+                                <!-- JS Rendered Pills -->
+                            </div>
+                        </div>
+
+                        <!-- Inputs Row -->
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <input type="text" id="inputNote" placeholder="例: 英語 単語帳200〜250語復習＆文法問題集" required class="sm:col-span-6 glass-input rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500">
+                            
+                            <!-- Focus Level Emoji Selector -->
+                            <div class="sm:col-span-3 flex items-center justify-around glass-input rounded-2xl px-2 py-2">
+                                <button type="button" onclick="selectMood('😃')" id="moodBtn1" class="mood-btn text-lg p-1 rounded-xl transition hover:scale-125">😃</button>
+                                <button type="button" onclick="selectMood('🔥')" id="moodBtn2" class="mood-btn text-lg p-1 rounded-xl transition hover:scale-125">🔥</button>
+                                <button type="button" onclick="selectMood('💡')" id="moodBtn3" class="mood-btn text-lg p-1 rounded-xl transition hover:scale-125">💡</button>
+                                <button type="button" onclick="selectMood('☕️')" id="moodBtn4" class="mood-btn text-lg p-1 rounded-xl transition hover:scale-125">☕️</button>
+                            </div>
+
+                            <div class="sm:col-span-3 flex items-center gap-2">
+                                <input type="number" id="inputMinutes" value="45" min="1" max="600" class="w-full glass-input rounded-2xl px-2 py-3 text-sm font-mono font-bold text-center text-white" title="学習時間(分)">
+                                <span class="text-xs font-bold text-slate-400 shrink-0">分</span>
+                                <button type="submit" class="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black px-4 py-3 rounded-2xl shadow-glow-violet btn-spring text-xs shrink-0 flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> 記録
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- VISUALIZATION DASHBOARD (CHARTS & HEATMAP) -->
+                <div class="glass-card rounded-3xl p-6 border border-white/10">
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 pb-3 border-b border-white/10">
+                        <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-cyan-400"></i> 学習データ分析ダッシュボード
+                        </h3>
+                        
+                        <div class="flex bg-slate-950/80 p-1 rounded-xl text-xs font-bold border border-white/10">
+                            <button onclick="switchTab('charts')" id="btnTabCharts" class="px-3.5 py-1.5 rounded-lg transition text-cyan-300 bg-white/10">
+                                グラフ分析
+                            </button>
+                            <button onclick="switchTab('heatmap')" id="btnTabHeatmap" class="px-3.5 py-1.5 rounded-lg transition text-slate-400 hover:text-white">
+                                学習草（ヒートマップ）
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Charts View -->
+                    <div id="viewCharts" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-3 w-full text-left">教科別の時間割合</span>
+                            <div class="w-full h-52 relative flex items-center justify-center">
+                                <canvas id="subjectDonutChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-3 w-full text-left">直近7日間の学習時間推移 (分)</span>
+                            <div class="w-full h-52 relative flex items-center justify-center">
+                                <canvas id="weeklyBarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heatmap Grid View -->
+                    <div id="viewHeatmap" class="hidden space-y-4">
+                        <div class="flex items-center justify-between text-xs text-slate-400 font-bold">
+                            <span>過去30日間の学習アクティビティ</span>
+                            <div class="flex items-center gap-1.5 text-[10px]">
+                                <span>Less</span>
+                                <span class="w-3 h-3 rounded-sm bg-slate-900 border border-white/5"></span>
+                                <span class="w-3 h-3 rounded-sm bg-purple-900/60"></span>
+                                <span class="w-3 h-3 rounded-sm bg-purple-600"></span>
+                                <span class="w-3 h-3 rounded-sm bg-cyan-400"></span>
+                                <span>More</span>
+                            </div>
+                        </div>
+                        <div id="heatmapGridContainer" class="grid grid-flow-col grid-rows-5 gap-2 overflow-x-auto pb-2 pt-1">
+                            <!-- JS populated -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- LOG MEMO TIMELINE FEED -->
+                <div class="glass-card rounded-3xl p-6 border border-white/10">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-ul text-emerald-400"></i> 勉強メモ・タイムライン
+                        </h3>
+                        
+                        <!-- Search & Subject Filters -->
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="searchInput" oninput="renderLogs()" placeholder="メモ内検索..." class="glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 w-32 sm:w-44">
+                            <select id="filterSubjectSelect" onchange="renderLogs()" class="glass-input rounded-xl px-2.5 py-1.5 text-xs text-slate-200 font-bold">
+                                <option value="ALL">全教科</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="logsFeed" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                        <!-- JS populated logs -->
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- FOOTER & TOS LINK -->
+        <footer class="mt-12 border-t border-white/10 bg-slate-950/80 backdrop-blur-md py-6 text-center text-xs text-slate-400">
+            <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-2">
+                    <span class="font-black text-white">StudyQuest Studio</span>
+                    <span>&copy; 2026 Studio App. All Rights Reserved.</span>
+                </div>
+                <div class="flex items-center space-x-4 font-bold">
+                    <button onclick="openTosModal()" class="hover:text-cyan-400 transition">利用規約・プライバシー</button>
+                    <span>•</span>
+                    <button onclick="exportData()" class="hover:text-purple-400 transition">データ出力</button>
+                    <span>•</span>
+                    <button onclick="resetAllData()" class="text-rose-400 hover:text-rose-300 transition">データ初期化</button>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- FULL SCREEN BREAK OVERLAY LOCK SCREEN -->
+    <div id="breakLockOverlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-3xl z-[9999] flex flex-col items-center justify-center p-6 text-center hidden transition-all duration-700">
+        <!-- Ambient Relax Gradient Glows -->
+        <div class="absolute w-[30rem] h-[30rem] bg-emerald-500/20 rounded-full blur-[140px] animate-pulse pointer-events-none"></div>
+        <div class="absolute w-[24rem] h-[24rem] bg-cyan-500/15 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-xl w-full flex flex-col items-center">
+            
+            <!-- Relax Icon Badge -->
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-[1px] shadow-glow-emerald mb-6 animate-bounce">
+                <div class="w-full h-full bg-slate-950 rounded-3xl flex items-center justify-center text-emerald-400 text-2xl">
+                    <i class="fa-solid fa-mug-hot"></i>
+                </div>
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
+                ☕️ 休憩時間（サイト機能ロック中）
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 font-medium mb-8 max-w-md">
+                画面から離れて、目を休めたり深呼吸をしましょう。休憩が終わると自動的に機能のロックが解除されます。
+            </p>
+
+            <!-- Large Prominent Break Countdown -->
+            <div class="glass-card bg-slate-900/90 border border-emerald-500/30 rounded-3xl px-8 py-6 mb-8 w-full shadow-2xl">
+                <div class="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400 mb-2">
+                    REMAINING REST TIME
+                </div>
+                <div id="breakTimerDisplay" class="text-6xl sm:text-7xl font-mono font-black text-white tracking-tighter drop-shadow-lg">
+                    10:00
+                </div>
+            </div>
+
+            <!-- Breathing Exercise Animated Circle -->
+            <div class="flex flex-col items-center justify-center mb-8">
+                <div class="w-24 h-24 rounded-full border-4 border-emerald-400/40 bg-emerald-500/10 flex items-center justify-center animate-ping mb-3">
+                    <i class="fa-solid fa-wind text-emerald-300 text-xl"></i>
+                </div>
+                <span id="breathingText" class="text-xs font-bold text-emerald-300 tracking-widest uppercase">
+                    深呼吸：息を吸って... 吐いて...
+                </span>
+            </div>
+
+            <!-- Emergency Unlock Button -->
+            <button onclick="confirmEmergencyUnlock()" class="text-xs text-slate-400 hover:text-rose-400 underline transition font-bold py-2 px-4 rounded-xl hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> 緊急で休憩をスキップして解除
+            </button>
+
+        </div>
+    </div>
+
+    <!-- CUSTOM TIMER MODAL -->
+    <div id="customModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-white/20 shadow-glow-violet">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-white/10">
+                <h3 class="font-black text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> カスタム時間設定
+                </h3>
+                <button onclick="closeCustomTimerModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold text-slate-300 block mb-2">勉強時間: <span id="customStudyVal" class="text-purple-400 font-mono font-black text-sm">45</span> 分</label>
+                    <input type="range" id="customStudySlider" min="1" max="180" value="45" oninput="document.getElementById('customStudyVal').innerText=this.value" class="w-full accent-purple-500 bg-slate-800">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-300 block mb-2">休憩時間: <span id="customRestVal" class="text-cyan-400 font-mono font-black text-sm">10</span> 分</label>
+                    <input type="range" id="customRestSlider" min="1" max="60" value="10" oninput="document.getElementById('customRestVal').innerText=this.value" class="w-full accent-cyan-400 bg-slate-800">
+                </div>
+            </div>
+            <button onclick="applyCustomTimer()" class="w-full mt-6 bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black py-3.5 rounded-2xl shadow-glow-violet btn-spring text-xs">
+                設定を適用する
+            </button>
+        </div>
+    </div>
+
+    <!-- TERMS OF SERVICE & PRIVACY MODAL -->
+    <div id="tosModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-2xl z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-slate-900 rounded-3xl max-w-3xl w-full p-6 sm:p-8 border border-white/20 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-4 border-b border-white/10 mb-4 shrink-0">
+                <h3 class="font-black text-lg text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-purple-400"></i> 利用規約 & プライバシーポリシー
+                </h3>
+                <button onclick="closeTosModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto space-y-5 text-xs text-slate-300 leading-relaxed pr-3 flex-grow font-medium">
+                <p>本利用規約（以下「本規約」）は、「StudyQuest（スタディクエスト）」（以下「当ウェブアプリ」）の利用条件およびプライバシー方針を定めるものです。</p>
+
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                    <h4 class="font-extrabold text-sm text-cyan-300">第1条（サービス内容）</h4>
+                    <p>1. 当ウェブアプリは、ポモドーロテクニックを活用した時間管理、勉強時間の可視化、メモ記録およびモチベーション維持を目的としたWebアプリケーションです。</p>
+                    <p>2. 休憩時間中は、健康的な休息を促進するため画面全体がロックされ、アプリ機能の操作制限が行われます。</p>
+                </div>
+
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                    <h4 class="font-extrabold text-sm text-cyan-300">第2条（ローカルストレージの利用とプライバシー）</h4>
+                    <p>1. 当ウェブアプリに入力された学習メモ、ポモドーロ時間、レベル情報などのデータは、すべてユーザーのWebブラウザ内（LocalStorage）にのみ保存されます。</p>
+                    <p>2. 当ウェブアプリの運営者が外部サーバーに個人情報や学習メモを送信・収集・第三者へ共有することは一切ありません。</p>
+                </div>
+
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                    <h4 class="font-extrabold text-sm text-cyan-300">第3条（免責事項）</h4>
+                    <p>1. 当ウェブアプリの利用により生じた直接的・間接的な損害について、運営者は一切の責任を負いません。</p>
+                    <p>2. ブラウザのキャッシュクリアや端末の故障等によりデータが消失した場合の復旧保証は行いません。必要に応じて「データ出力」機能をご利用ください。</p>
+                </div>
+
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                    <h4 class="font-extrabold text-sm text-cyan-300">第4条（規約の変更）</h4>
+                    <p>運営者は、必要と判断した場合には予告なく本規約を変更できるものとします。</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-white/10 text-right shrink-0">
+                <button onclick="closeTosModal()" class="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black px-6 py-2.5 rounded-xl text-xs shadow-lg btn-spring">
+                    同意して閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // --- SUBJECT DEFINITIONS ---
+        const SUBJECTS = [
+            { id: 'math', name: '数学・算数', icon: '🧮', color: '#8b5cf6' },
+            { id: 'english', name: '英語・語学', icon: '🇬🇧', color: '#06b6d4' },
+            { id: 'japanese', name: '国語・読書', icon: '📖', color: '#f43f5e' },
+            { id: 'science', name: '理科・科学', icon: '🔬', color: '#10b981' },
+            { id: 'society', name: '社会・歴史', icon: '🌍', color: '#f59e0b' },
+            { id: 'code', name: 'プログラミング', icon: '💻', color: '#3b82f6' },
+            { id: 'other', name: 'その他・資格', icon: '🎨', color: '#a855f7' }
+        ];
+
+        // --- GLOBAL STATE ---
+        let appState = {
+            preset: 'junior',
+            studyMins: 45,
+            restMins: 10,
+            mode: 'study', // 'study' or 'rest'
+            timeLeft: 45 * 60,
+            isRunning: false,
+            timerInterval: null,
+            selectedSubject: SUBJECTS[0].name,
+            selectedMood: '😃',
+            exp: 0,
+            level: 1,
+            streakDays: 1,
+            stampCount: 0,
+            audioMuted: false,
+            logs: []
+        };
+
+        let donutChart = null;
+        let barChart = null;
+
+        // --- ON LOAD INITIALIZATION ---
+        window.onload = function() {
+            loadStorage();
+            renderSubjectPills();
+            renderFilterSelect();
+            updatePresetUI();
+            resetTimer();
+            initCharts();
+            selectMood('😃');
+            updateAllUI();
+        };
+
+        // --- SYNTHESIZED AUDIO FEEDBACK ---
+        function playChimeSound(type) {
+            if (appState.audioMuted) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+                if (type === 'start') {
+                    osc.frequency.setValueAtTime(440, now); // A4
+                    osc.frequency.setValueAtTime(880, now + 0.12); // A5
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'complete') {
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    osc.frequency.setValueAtTime(1046.50, now + 0.35); // C6
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
+                } else if (type === 'relax') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(329.63, now); // E4
+                    osc.frequency.setValueAtTime(440, now + 0.25); // A4
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+                    osc.start(now);
+                    osc.stop(now + 1.2);
+                }
+            } catch (e) {
+                console.log("Audio Context initialization skipped");
+            }
+        }
+
+        function toggleAudioMute() {
+            appState.audioMuted = !appState.audioMuted;
+            const icon = document.getElementById('audioIcon');
+            icon.className = appState.audioMuted ? "fa-solid fa-volume-xmark text-rose-400" : "fa-solid fa-volume-high text-slate-400";
+        }
+
+        // --- CELEBRATION CONFETTI ---
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 90,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        // --- PRESET SELECTION ---
+        function setPreset(presetKey) {
+            appState.preset = presetKey;
+            if (presetKey === 'elementary') {
+                appState.studyMins = 25;
+                appState.restMins = 5;
+            } else if (presetKey === 'junior') {
+                appState.studyMins = 45;
+                appState.restMins = 10;
+            } else if (presetKey === 'adult') {
+                appState.studyMins = 50;
+                appState.restMins = 10;
+            }
+            document.getElementById('inputMinutes').value = appState.studyMins;
+            updatePresetUI();
+            resetTimer();
+            saveStorage();
+        }
+
+        function updatePresetUI() {
+            const keys = ['elementary', 'junior', 'adult', 'custom'];
+            keys.forEach(k => {
+                const btnId = 'btnPreset' + k.charAt(0).toUpperCase() + k.slice(1, 4);
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    if (appState.preset === k) {
+                        btn.className = "preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 bg-gradient-to-r from-purple-600 to-cyan-500 text-white shadow-glow-violet";
+                    } else {
+                        btn.className = "preset-pill py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 text-slate-400 hover:text-white";
+                    }
+                }
+            });
+            if (appState.preset === 'custom') {
+                document.getElementById('customPillSub').innerText = `${appState.studyMins}分/${appState.restMins}分`;
+            }
+        }
+
+        // --- TIMER ENGINE ---
+        function toggleTimer() {
+            if (appState.isRunning) {
+                // Pause
+                clearInterval(appState.timerInterval);
+                appState.isRunning = false;
+                document.getElementById('textMainStart').innerText = "再開";
+                document.getElementById('iconMainStart').className = "fa-solid fa-play";
+            } else {
+                // Start
+                playChimeSound('start');
+                appState.isRunning = true;
+                document.getElementById('textMainStart').innerText = "一時停止";
+                document.getElementById('iconMainStart').className = "fa-solid fa-pause";
+
+                appState.timerInterval = setInterval(() => {
+                    if (appState.timeLeft > 0) {
+                        appState.timeLeft--;
+                        renderTimerRingDisplay();
+                    } else {
+                        clearInterval(appState.timerInterval);
+                        appState.isRunning = false;
+                        onTimerComplete();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(appState.timerInterval);
+            appState.isRunning = false;
+            appState.timeLeft = (appState.mode === 'study' ? appState.studyMins : appState.restMins) * 60;
+            document.getElementById('textMainStart').innerText = "スタート";
+            document.getElementById('iconMainStart').className = "fa-solid fa-play";
+            renderTimerRingDisplay();
+        }
+
+        function skipTimer() {
+            if (confirm("現在のセッションをスキップして切り替えますか？")) {
+                clearInterval(appState.timerInterval);
+                appState.isRunning = false;
+                switchSessionMode(appState.mode === 'study' ? 'rest' : 'study');
+            }
+        }
+
+        function onTimerComplete() {
+            playChimeSound('complete');
+            triggerConfetti();
+
+            if (appState.mode === 'study') {
+                // Award XP
+                addExp(appState.studyMins * 2);
+
+                // Auto Log
+                const inputNote = document.getElementById('inputNote').value.trim() || `${appState.selectedSubject} 集中学習完了`;
+                addLogEntry(appState.selectedSubject, inputNote, appState.studyMins, appState.selectedMood);
+                document.getElementById('inputNote').value = '';
+
+                if (appState.stampCount < 5) appState.stampCount++;
+
+                switchSessionMode('rest');
+            } else {
+                switchSessionMode('study');
+            }
+            saveStorage();
+            updateAllUI();
+        }
+
+        function switchSessionMode(newMode) {
+            appState.mode = newMode;
+            const badge = document.getElementById('modeBadge');
+            const badgeText = document.getElementById('modeBadgeText');
+            const glow = document.getElementById('timerGlow');
+            const gradStart = document.getElementById('gradStart');
+            const gradEnd = document.getElementById('gradEnd');
+            const lockOverlay = document.getElementById('breakLockOverlay');
+
+            if (newMode === 'study') {
+                lockOverlay.classList.add('hidden');
+                badge.className = "inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black shadow-lg border transition-all duration-500 bg-purple-500/20 text-purple-300 border-purple-500/40";
+                badgeText.innerText = "🔥 集中セッション中";
+                glow.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl pointer-events-none transition-all duration-700";
+                gradStart.setAttribute('stop-color', '#8b5cf6');
+                gradEnd.setAttribute('stop-color', '#06b6d4');
+                document.getElementById('timerSubGoal').innerText = `目標: ${appState.studyMins}分 集中`;
+                resetTimer();
+            } else {
+                // LOCK SITE DURING BREAK TIME
+                playChimeSound('relax');
+                lockOverlay.classList.remove('hidden');
+                badge.className = "inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black shadow-lg border transition-all duration-500 bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+                badgeText.innerText = "☕️ 休憩セッション中（画面ロック中）";
+                glow.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none transition-all duration-700";
+                gradStart.setAttribute('stop-color', '#10b981');
+                gradEnd.setAttribute('stop-color', '#06b6d4');
+                document.getElementById('timerSubGoal').innerText = `目標: ${appState.restMins}分 リフレッシュ`;
+                
+                // AUTO START BREAK COUNTDOWN
+                resetTimer();
+                toggleTimer();
+            }
+        }
+
+        function confirmEmergencyUnlock() {
+            if (confirm("本当に休憩を中断して勉強モードに戻りますか？\n（しっかり体を休めることをおすすめします）")) {
+                clearInterval(appState.timerInterval);
+                appState.isRunning = false;
+                switchSessionMode('study');
+            }
+        }
+
+        function renderTimerRingDisplay() {
+            const mins = Math.floor(appState.timeLeft / 60);
+            const secs = appState.timeLeft % 60;
+            const timeStr = String(mins).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
+            
+            document.getElementById('timerDisplay').innerText = timeStr;
+            document.getElementById('breakTimerDisplay').innerText = timeStr;
+
+            const totalSecs = (appState.mode === 'study' ? appState.studyMins : appState.restMins) * 60;
+            const ratio = appState.timeLeft / totalSecs;
+            const circumference = 2 * Math.PI * 95;
+            const offset = circumference * (1 - ratio);
+            document.getElementById('timerProgressRing').style.strokeDashoffset = offset;
+        }
+
+        // --- EXP & LEVEL ---
+        function addExp(amount) {
+            appState.exp += amount;
+            const nextLvlXp = appState.level * 100;
+            if (appState.exp >= nextLvlXp) {
+                appState.level++;
+                playChimeSound('complete');
+                triggerConfetti();
+            }
+        }
+
+        function getRankTitle(lvl) {
+            if (lvl >= 10) return "👑 伝説の学者";
+            if (lvl >= 7) return "⚡️ 集中マスター";
+            if (lvl >= 4) return "🦉 学習探求者";
+            return "🐣 見習いチャレンジャー";
+        }
+
+        // --- MEMO LOGGING ---
+        function selectMood(emoji) {
+            appState.selectedMood = emoji;
+            const moods = ['😃', '🔥', '💡', '☕️'];
+            moods.forEach((m, idx) => {
+                const btn = document.getElementById(`moodBtn${idx + 1}`);
+                if (btn) {
+                    btn.className = m === emoji ? "mood-btn text-lg p-1 rounded-xl bg-purple-500/30 border border-purple-400 scale-110" : "mood-btn text-lg p-1 rounded-xl transition hover:scale-125 opacity-60";
+                }
+            });
+        }
+
+        function handleMemoSubmit(e) {
+            e.preventDefault();
+            const noteInput = document.getElementById('inputNote');
+            const minsInput = document.getElementById('inputMinutes');
+
+            const note = noteInput.value.trim();
+            const mins = parseInt(minsInput.value) || 30;
+
+            if (!note) return;
+
+            addLogEntry(appState.selectedSubject, note, mins, appState.selectedMood);
+            addExp(mins * 2);
+
+            noteInput.value = '';
+            saveStorage();
+            updateAllUI();
+            triggerConfetti();
+        }
+
+        function addLogEntry(subject, note, minutes, mood) {
+            const entry = {
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                subject: subject,
+                note: note,
+                minutes: minutes,
+                mood: mood || '😃'
+            };
+            appState.logs.unshift(entry);
+        }
+
+        function deleteLogEntry(id) {
+            if (confirm("このメモを削除しますか？")) {
+                appState.logs = appState.logs.filter(l => l.id !== id);
+                saveStorage();
+                updateAllUI();
+            }
+        }
+
+        // --- UI RENDERERS ---
+        function renderSubjectPills() {
+            const container = document.getElementById('subjectPillContainer');
+            container.innerHTML = SUBJECTS.map(s => {
+                const isSelected = appState.selectedSubject === s.name;
+                return `
+                    <button type="button" onclick="selectSubject('${s.name}')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${isSelected ? 'bg-gradient-to-r from-purple-600 to-cyan-500 text-white shadow-glow-violet' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-white/10'}">
+                        <span>${s.icon}</span>
+                        <span>${s.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectSubject(name) {
+            appState.selectedSubject = name;
+            renderSubjectPills();
+        }
+
+        function renderFilterSelect() {
+            const select = document.getElementById('filterSubjectSelect');
+            select.innerHTML = '<option value="ALL">全教科</option>' + 
+                SUBJECTS.map(s => `<option value="${s.name}">${s.icon} ${s.name}</option>`).join('');
+        }
+
+        function renderLogs() {
+            const feed = document.getElementById('logsFeed');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filter = document.getElementById('filterSubjectSelect').value;
+
+            const filtered = appState.logs.filter(l => {
+                const matchSearch = l.note.toLowerCase().includes(search) || l.subject.toLowerCase().includes(search);
+                const matchFilter = filter === 'ALL' || l.subject === filter;
+                return matchSearch && matchFilter;
+            });
+
+            if (filtered.length === 0) {
+                feed.innerHTML = `
+                    <div class="text-center py-8 text-slate-500">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-30"></i>
+                        <p class="text-xs font-bold">該当するメモがありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            feed.innerHTML = filtered.map(l => {
+                const subjObj = SUBJECTS.find(s => s.name === l.subject) || { icon: '📝', color: '#8b5cf6' };
+                return `
+                    <div class="glass-card rounded-2xl p-3.5 border border-white/10 flex items-center justify-between gap-3 hover:border-purple-500/40 transition">
+                        <div class="flex items-center space-x-3 overflow-hidden">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background-color: ${subjObj.color}20; color: ${subjObj.color}">
+                                ${subjObj.icon}
+                            </div>
+                            <div class="truncate">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-xs font-black text-white">${escapeHtml(l.subject)}</span>
+                                    <span class="text-[10px] text-slate-400 font-mono">${l.date} ${l.time || ''}</span>
+                                    <span class="text-xs">${l.mood || '😃'}</span>
+                                </div>
+                                <p class="text-xs text-slate-300 font-medium truncate">${escapeHtml(l.note)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 shrink-0">
+                            <span class="text-xs font-black font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-lg">+${l.minutes}分</span>
+                            <button onclick="deleteLogEntry(${l.id})" class="text-slate-500 hover:text-rose-400 p-1 transition">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStampCard() {
+            const grid = document.getElementById('stampCardGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const isStamped = i <= appState.stampCount;
+                grid.innerHTML += `
+                    <div class="aspect-square rounded-2xl flex flex-col items-center justify-center font-bold text-xs border transition ${isStamped ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 border-amber-300 text-slate-950 shadow-md scale-105' : 'bg-slate-950/80 border-white/10 text-slate-600'}">
+                        ${isStamped ? '<i class="fa-solid fa-star text-lg animate-bounce"></i>' : `<span>${i}</span>`}
+                    </div>
+                `;
+            }
+            document.getElementById('stampCountText').innerText = `${appState.stampCount} / 5 達成`;
+        }
+
+        function renderHeatmapGrid() {
+            const grid = document.getElementById('heatmapGridContainer');
+            grid.innerHTML = '';
+
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+
+                const dayMins = appState.logs
+                    .filter(l => l.date === dStr)
+                    .reduce((acc, cur) => acc + cur.minutes, 0);
+
+                let bgClass = "bg-slate-950 border border-white/5";
+                if (dayMins > 90) bgClass = "bg-cyan-400 text-slate-950 shadow-glow-cyan";
+                else if (dayMins > 45) bgClass = "bg-purple-600 text-white";
+                else if (dayMins > 0) bgClass = "bg-purple-900/60 text-purple-200";
+
+                grid.innerHTML += `
+                    <div class="w-6 h-6 rounded-md ${bgClass} flex items-center justify-center text-[9px] font-mono font-bold" title="${dStr}: ${dayMins}分">
+                        ${d.getDate()}
+                    </div>
+                `;
+            }
+        }
+
+        function updateAllUI() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayMins = appState.logs.filter(l => l.date === todayStr).reduce((a, b) => a + b.minutes, 0);
+            const totalMins = appState.logs.reduce((a, b) => a + b.minutes, 0);
+
+            document.getElementById('statTodayTime').innerText = todayMins;
+            document.getElementById('statTotalTime').innerText = totalMins;
+            document.getElementById('statTotalLogs').innerText = appState.logs.length;
+
+            const counts = {};
+            appState.logs.forEach(l => { counts[l.subject] = (counts[l.subject] || 0) + l.minutes; });
+            const topSubj = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, 'なし');
+            document.getElementById('statTopSubject').innerText = topSubj;
+
+            document.getElementById('headerLevel').innerText = appState.level;
+            document.getElementById('headerRankBadge').innerText = getRankTitle(appState.level);
+            document.getElementById('headerStreak').innerText = appState.streakDays;
+
+            const nextLvlXp = appState.level * 100;
+            document.getElementById('headerXpText').innerText = appState.exp;
+            document.getElementById('headerNextXpText').innerText = nextLvlXp;
+            const pct = Math.min(100, (appState.exp / nextLvlXp) * 100);
+            document.getElementById('headerXpProgress').style.width = `${pct}%`;
+
+            renderLogs();
+            renderStampCard();
+            renderHeatmapGrid();
+            updateCharts();
+        }
+
+        // --- CHART.JS VISUALS ---
+        function initCharts() {
+            const ctx1 = document.getElementById('subjectDonutChart').getContext('2d');
+            donutChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: SUBJECTS.map(s => s.color),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' }, boxWidth: 10 } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('weeklyBarChart').getContext('2d');
+            barChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: '#8b5cf6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!donutChart || !barChart) return;
+
+            const subjMap = {};
+            appState.logs.forEach(l => { subjMap[l.subject] = (subjMap[l.subject] || 0) + l.minutes; });
+            donutChart.data.labels = Object.keys(subjMap);
+            donutChart.data.datasets[0].data = Object.values(subjMap);
+            donutChart.update();
+
+            const days = [];
+            const minsArr = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                days.push(dStr.slice(5));
+                const sum = appState.logs.filter(l => l.date === dStr).reduce((a, b) => a + b.minutes, 0);
+                minsArr.push(sum);
+            }
+            barChart.data.labels = days;
+            barChart.data.datasets[0].data = minsArr;
+            barChart.update();
+        }
+
+        function switchTab(tab) {
+            const viewCharts = document.getElementById('viewCharts');
+            const viewHeatmap = document.getElementById('viewHeatmap');
+            const btnCharts = document.getElementById('btnTabCharts');
+            const btnHeatmap = document.getElementById('btnTabHeatmap');
+
+            if (tab === 'charts') {
+                viewCharts.classList.remove('hidden');
+                viewHeatmap.classList.add('hidden');
+                btnCharts.className = "px-3.5 py-1.5 rounded-lg transition text-cyan-300 bg-white/10";
+                btnHeatmap.className = "px-3.5 py-1.5 rounded-lg transition text-slate-400 hover:text-white";
+            } else {
+                viewCharts.classList.add('hidden');
+                viewHeatmap.classList.remove('hidden');
+                btnHeatmap.className = "px-3.5 py-1.5 rounded-lg transition text-cyan-300 bg-white/10";
+                btnCharts.className = "px-3.5 py-1.5 rounded-lg transition text-slate-400 hover:text-white";
+            }
+        }
+
+        // --- MODAL CONTROLLERS ---
+        function openCustomTimerModal() {
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+        function closeCustomTimerModal() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+        function applyCustomTimer() {
+            appState.preset = 'custom';
+            appState.studyMins = parseInt(document.getElementById('customStudySlider').value);
+            appState.restMins = parseInt(document.getElementById('customRestSlider').value);
+            document.getElementById('inputMinutes').value = appState.studyMins;
+            updatePresetUI();
+            resetTimer();
+            closeCustomTimerModal();
+            saveStorage();
+        }
+
+        function openTosModal() {
+            document.getElementById('tosModal').classList.remove('hidden');
+        }
+        function closeTosModal() {
+            document.getElementById('tosModal').classList.add('hidden');
+        }
+
+        // --- LOCAL STORAGE ---
+        function saveStorage() {
+            localStorage.setItem('studyQuest_clean_state', JSON.stringify({
+                preset: appState.preset,
+                studyMins: appState.studyMins,
+                restMins: appState.restMins,
+                exp: appState.exp,
+                level: appState.level,
+                stampCount: appState.stampCount,
+                logs: appState.logs
+            }));
+        }
+
+        function loadStorage() {
+            const raw = localStorage.getItem('studyQuest_clean_state');
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    appState.preset = parsed.preset || 'junior';
+                    appState.studyMins = parsed.studyMins || 45;
+                    appState.restMins = parsed.restMins || 10;
+                    appState.exp = parsed.exp || 0;
+                    appState.level = parsed.level || 1;
+                    appState.stampCount = parsed.stampCount || 0;
+                    appState.logs = parsed.logs || [];
+                } catch (e) {
+                    console.error("Storage parse failed");
+                }
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState.logs, null, 2));
+            const anchor = document.createElement('a');
+            anchor.setAttribute("href", dataStr);
+            anchor.setAttribute("download", `studyquest_data_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+        }
+
+        function resetAllData() {
+            if (confirm("全データを消去して初期状態に戻しますか？")) {
+                localStorage.removeItem('studyQuest_clean_state');
+                location.reload();
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
